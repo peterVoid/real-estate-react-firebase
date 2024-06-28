@@ -37,7 +37,6 @@ function SignUp() {
       toast.success("Sign up was successfully");
       navigate("/");
     } catch (error) {
-      console.log(error);
       toast.error("Something went wrong");
     }
   };
