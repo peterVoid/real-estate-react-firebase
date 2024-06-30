@@ -1,19 +1,43 @@
 import { useState } from "react";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { updateProfile } from "firebase/auth";
+import { doc, updateDoc } from "firebase/firestore";
 
 function Profile() {
-  const authUser = auth;
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    name: authUser.currentUser.displayName,
+    name: auth.currentUser.displayName,
     email: auth.currentUser.email,
   });
   const { name, email } = formData;
-
+  const [toggleUpdateUsername, setToggleUpdateUsername] = useState(false);
   const handleSignOut = () => {
     auth.signOut();
     navigate("/sign-in");
+  };
+
+  const onChange = (e) => {
+    setFormData((prev) => ({ ...prev, [e.target.id]: e.target.value }));
+  };
+
+  const onSubmit = async () => {
+    try {
+      if (auth.currentUser.displayName !== name) {
+        await updateProfile(auth.currentUser, {
+          displayName: name,
+        });
+
+        const docRef = doc(db, "users", auth.currentUser.uid);
+        await updateDoc(docRef, {
+          name,
+        });
+      }
+      toast.success("Profile details updated");
+    } catch (error) {
+      toast.error("could not update the profile details");
+    }
   };
 
   return (
@@ -26,8 +50,11 @@ function Profile() {
               type="text"
               id="name"
               value={name}
-              disabled
-              className="w-full px-4 py-2 text-xl text-gray-700 bg-white border border-gray-300 rounded transition ease-in-out"
+              disabled={!toggleUpdateUsername}
+              onChange={onChange}
+              className={`w-full px-4 py-2 text-xl text-gray-700 bg-white border border-gray-300 rounded transition ease-in-out ${
+                toggleUpdateUsername && "bg-red-200 focus:bg-red-200"
+              }`}
             />
 
             <input
@@ -40,8 +67,14 @@ function Profile() {
             <div className="flex justify-between whitespace-nowrap text-sm sm:text-lg">
               <p className="flex items-center mb-6">
                 do you want to change your name?
-                <span className="text-red-600 hover:text-red-700 transition ease-in-out duration-200 ml-1 cursor-pointer">
-                  Edit
+                <span
+                  className="text-red-600 hover:text-red-700 transition ease-in-out duration-200 ml-1 cursor-pointer"
+                  onClick={() => {
+                    toggleUpdateUsername && onSubmit();
+                    setToggleUpdateUsername((prev) => !prev);
+                  }}
+                >
+                  {toggleUpdateUsername ? "Aplly change" : "edit"}
                 </span>
               </p>
               <p
